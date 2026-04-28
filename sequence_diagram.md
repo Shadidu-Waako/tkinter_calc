@@ -142,7 +142,7 @@ docker compose up --build
 
 ## 🐧 Linux / macOS
 
-### 1. Create virtual environment
+### 1. Create a virtual environment
 
 ```bash
 python3 -m venv venv
@@ -162,7 +162,7 @@ sudo apt install redis -y
 sudo systemctl start redis
 ```
 
-### 4. Run server
+### 4. Run Project
 
 ```bash
 uvicorn main:app --reload
@@ -200,7 +200,7 @@ sudo apt install redis -y
 sudo service redis start
 ```
 
-### 4. Run FastAPI server
+### 4. Run Project
 
 ```powershell
 uvicorn main:app --reload
@@ -229,7 +229,7 @@ pydantic
 
 ---
 
-# 🧠 Tip for Reviewers
+# 🧠 Tip
 
 Docker setup is the **recommended production path**, while local setup is provided for development flexibility across Linux, macOS, and Windows.
 
@@ -397,7 +397,7 @@ curl -X POST http://localhost:8000/process-payment \
 -d '{"amount":100,"currency":"GHS"}'
 ```
 
-Run same command twice to test replay behavior.
+Run the same command twice to test replay behavior.
 
 ---
 
