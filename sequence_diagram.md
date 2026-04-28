@@ -221,13 +221,11 @@ pydantic
 
 ---
 
-# 🌍 Access URLs
+# . Access the application
 
-| Service | URL |
-|--------|-----|
-| API | http://localhost:8000 |
-| Swagger UI | http://localhost:8000/docs |
-| Metrics | http://localhost:8000/metrics |
+- API → http://localhost:8000  
+- Swagger Docs → http://localhost:8000/docs  
+- Metrics → http://localhost:8000/metrics  
 
 ---
 
