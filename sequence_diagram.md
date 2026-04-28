@@ -44,9 +44,6 @@ This project solves that problem.
 
 ---
 
-# Architecture Diagram
----
-
 # Sequence Diagram
 
 ```mermaid
@@ -166,7 +163,7 @@ Content-Type: application/json
 ```json
 {
   "amount": 100,
-  "currency": "GHS"
+  "currency": "UGX"
 }
 ```
 
@@ -176,7 +173,7 @@ Content-Type: application/json
 
 ```json
 {
-  "message": "Charged 100 GHS"
+  "message": "Charged 100 UGX"
 }
 ```
 
@@ -194,7 +191,7 @@ Same key + same payload:
 
 ```json
 {
-  "message": "Charged 100 GHS"
+  "message": "Charged 100 UGX"
 }
 ```
 
