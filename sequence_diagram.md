@@ -108,7 +108,15 @@ K -- No --> M
 
 # Setup Instructions
 
-## Clone Repository
+This project can run using **Docker (recommended)** or **locally without Docker**.
+
+---
+
+# 🚀 Option 1: Run with Docker (Recommended)
+
+This is the easiest and production-like setup.
+
+## 1. Clone Repository
 
 ```bash
 git clone https://github.com/Shadidu-Waako/AmaliTech-DEG-Project-based-challenges
@@ -116,11 +124,116 @@ cd backend
 cd Idempotency-gateway
 ```
 
-## Run Project
+## 2. Run Project
 
 ```bash
 docker compose up --build
 ```
+
+## 3. Access the application
+
+- API → http://localhost:8000  
+- Swagger Docs → http://localhost:8000/docs  
+- Metrics → http://localhost:8000/metrics  
+
+---
+
+# 💻 Option 2: Run Locally (No Docker)
+
+## 🐧 Linux / macOS
+
+### 1. Create virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 2. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Install Redis
+
+```bash
+sudo apt install redis -y
+sudo systemctl start redis
+```
+
+### 4. Run server
+
+```bash
+uvicorn main:app --reload
+```
+
+---
+
+## 🪟 Windows (PowerShell / CMD)
+
+### 1. Create a virtual environment
+
+```powershell
+python -m venv venv
+venv\Scripts\activate
+```
+
+### 2. Install dependencies
+
+```powershell
+pip install -r requirements.txt
+```
+
+### 3. Install Redis (Windows options)
+
+#### Option A (Recommended): Use Docker Redis
+```bash
+docker run -d -p 6379:6379 redis
+```
+
+#### Option B: WSL (Ubuntu on Windows)
+Install Redis inside WSL:
+```bash
+sudo apt update
+sudo apt install redis -y
+sudo service redis start
+```
+
+### 4. Run FastAPI server
+
+```powershell
+uvicorn main:app --reload
+```
+
+---
+
+# 📦 Requirements
+
+Make sure your `requirements.txt` contains:
+
+```
+fastapi
+uvicorn
+redis
+pydantic
+```
+
+---
+
+# 🌍 Access URLs
+
+| Service | URL |
+|--------|-----|
+| API | http://localhost:8000 |
+| Swagger UI | http://localhost:8000/docs |
+| Metrics | http://localhost:8000/metrics |
+
+---
+
+# 🧠 Tip for Reviewers
+
+Docker setup is the **recommended production path**, while local setup is provided for development flexibility across Linux, macOS, and Windows.
 
 ---
 
