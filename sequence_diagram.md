@@ -1,69 +1,297 @@
+# Idempotency Gateway (Pay-Once Protocol)
+
+A backend middleware service that prevents duplicate payment processing when clients retry requests due to timeouts or unstable networks.
+
+This system guarantees that the same payment request with the same `Idempotency-Key` is processed **exactly once**.
+
+---
+
+# Problem Statement
+
+Payment clients sometimes retry requests when networks lag.
+
+Without idempotency:
+
+- Customer clicks Pay
+- First request is slow
+- Client retries
+- Both requests get processed
+- Customer gets charged twice
+
+This project solves that problem.
+
+---
+
+# Features
+
+- Prevent duplicate charges
+- Replay previous successful responses
+- Reject same key with modified body
+- Handle concurrent duplicate requests safely
+- Redis-backed storage
+- Automatic key expiry (24h TTL)
+- Metrics endpoint
+- Dockerized setup
+
+---
+
+# Architecture Stack
+
+- FastAPI
+- Python 3.11
+- Redis
+- Docker Compose
+
+---
+
+# Architecture Diagram
+---
+
+# Sequence Diagram
+
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor C as Client System
-    participant S as Idempotency Gateway (Server)
-    participant DB as Idempotency Store (Redis)
-    participant BANK as Core Bank API (Simulation)
+participant Client
+participant API
+participant Redis
 
-    Note over C, S: User Story 1: The First Transaction (Happy Path)
-    
-    C->>S: POST /process-payment {amt: 100} <br/> Header: Idempotency-Key: "key_abc_123"
-    
-    Note over S, DB: Atomic check-and-set (e.g., SETNX in Redis)
-    S->>DB: Check if "key_abc_123" exists
-    DB-->>S: Key does not exist.
-    
-    S->>DB: SET "key_abc_123" status="PROCESSING" (with TTL)
-    
-    Note over S, BANK: Simulate processing delay (2 seconds)
-    S->>BANK: Process Charge for 100
-    BANK-->>S: Success (Charge ID: ch_1)
-    
-    Note over S, DB: Store the response final state
-    S->>DB: UPDATE "key_abc_123" status="COMPLETED", response={"msg": "Charged 100", "id": "ch_1"}
-    
-    S-->>C: 200 OK {"msg": "Charged 100", "id": "ch_1"}
+Client->>API: POST /process-payment + Idempotency-Key
+API->>Redis: Check if key exists
 
-    Note over C, S: User Story 2: The Duplicate Attempt
+alt Key does not exist
+    API->>Redis: Save status=processing
+    API->>API: Simulate payment processing (2 sec)
+    API->>Redis: Save completed response
+    API-->>Client: 201 Created
 
-    C->>S: POST /process-payment {amt: 100} <br/> Header: Idempotency-Key: "key_abc_123"
-    
-    S->>DB: Check "key_abc_123"
-    DB-->>S: Exists. Status="COMPLETED". Payload={...}
-    
-    Note over S: Detected COMPLETED state.<br/>DO NOT call BANK API.
-    
-    S-->>C: 200 OK {"msg": "Charged 100", "id": "ch_1"} <br/> Header: X-Cache-Hit: true
+else Key exists + completed
+    API->>Redis: Fetch saved response
+    API-->>Client: Return cached result + X-Cache-Hit:true
 
-    Note over C, S: User Story 6: The "In-Flight" Check (Race Condition)
+else Key exists + processing
+    API->>Redis: Wait for first request
+    Redis-->>API: Completed response
+    API-->>Client: Return same result
 
-    par Request A (Arrives slightly first)
-        C->>S: POST ... Header: Idempotency-Key: "key_xyz"
-        S->>DB: SETNX "key_xyz" to "PROCESSING"
-        DB-->>S: OK (Lock Acquired)
-        S->>BANK: Start Processing...
-    and Request B (Arrives during A's processing)
-        C->>S: POST ... Header: Idempotency-Key: "key_xyz"
-        S->>DB: SETNX "key_xyz" to "PROCESSING"
-        DB-->>S: FAIL (Key already exists)
-        
-        Note right of S: Request B must wait or poll.<br/>We assume polling DB status here.
-        
-        loop Polling DB status
-            S->>DB: GET status of "key_xyz"
-            DB-->>S: "PROCESSING"
-        end
-    end
+else Key reused with different body
+    API-->>Client: 422 Unprocessable Entity
+end
+```
 
-    Note over S, BANK: Request A finishes BANK call
-    BANK-->>S: A Success
-    S->>DB: UPDATE "key_xyz" to "COMPLETED", Payload={...}
-    S-->>C: (Return Request A) 200 OK
+---
 
-    loop Next Poll by Request B thread
-        S->>DB: GET status of "key_xyz"
-        DB-->>S: "COMPLETED", Payload={...}
-    end
-    
-    S-->>C: (Return Request B) 200 OK
+# Flowchart
+
+```mermaid
+flowchart TD
+A[Receive Payment Request] --> B{Idempotency-Key Present?}
+
+B -- No --> C[Return 400 Error]
+
+B -- Yes --> D{Key Exists in Redis?}
+
+D -- No --> E[Save status=processing]
+E --> F[Process Payment]
+F --> G[Store Final Response]
+G --> H[Return 201]
+
+D -- Yes --> I{Same Request Body?}
+
+I -- No --> J[Return 422 Error]
+
+I -- Yes --> K{Status Processing?}
+
+K -- Yes --> L[Wait Until Complete]
+L --> M[Return Cached Response]
+
+K -- No --> M
+```
+
+---
+
+# Setup Instructions
+
+## Clone Repository
+
+```bash
+git clone <your-repo-url>
+cd idempotency-gateway
+```
+
+## Run Project
+
+```bash
+docker compose up --build
+```
+
+---
+
+# Access URLs
+
+## API Root
+
+```text
+http://localhost:8000
+```
+
+## Swagger Docs
+
+```text
+http://localhost:8000/docs
+```
+
+## Metrics
+
+```text
+http://localhost:8000/metrics
+```
+
+---
+
+# API Documentation
+
+---
+
+## POST /process-payment
+
+### Headers
+
+```http
+Idempotency-Key: pay123
+Content-Type: application/json
+```
+
+### Body
+
+```json
+{
+  "amount": 100,
+  "currency": "GHS"
+}
+```
+
+---
+
+## First Request Response
+
+```json
+{
+  "message": "Charged 100 GHS"
+}
+```
+
+Status:
+
+```text
+201 Created
+```
+
+---
+
+## Duplicate Request Response
+
+Same key + same payload:
+
+```json
+{
+  "message": "Charged 100 GHS"
+}
+```
+
+Header:
+
+```http
+X-Cache-Hit: true
+```
+
+---
+
+## Different Payload Same Key
+
+```json
+{
+  "detail": "Idempotency key already used for a different request body."
+}
+```
+
+Status:
+
+```text
+422 Unprocessable Entity
+```
+
+---
+
+# Metrics Endpoint
+
+## GET /metrics
+
+Response:
+
+```json
+{
+  "processed": 3,
+  "cache_hits": 5,
+  "conflicts": 1
+}
+```
+
+---
+
+# Design Decisions
+
+## Why Redis?
+
+Redis was selected because it provides:
+
+- Fast key-value lookups
+- Atomic operations (`SETNX`)
+- Expiry support (TTL)
+- Suitable for distributed systems
+
+## Why Request Hashing?
+
+SHA256 hash of request body ensures a key cannot be reused for another payment.
+
+## Why In-Flight Waiting?
+
+If duplicate requests arrive simultaneously:
+
+- First request processes
+- Second request waits
+- Both receive same final result
+
+This prevents race-condition double charging.
+
+---
+
+# Developer's Choice Feature
+
+## TTL Expiry (24 Hours)
+
+Idempotency keys automatically expire after 24 hours.
+
+Benefits:
+
+- Prevents unlimited storage growth
+- Realistic payment gateway behavior
+- Reduces stale data accumulation
+
+---
+
+# Example cURL Test
+
+```bash
+curl -X POST http://localhost:8000/process-payment \
+-H "Content-Type: application/json" \
+-H "Idempotency-Key: pay001" \
+-d '{"amount":100,"currency":"GHS"}'
+```
+
+Run same command twice to test replay behavior.
+
+---
+
+# Author
+
+Waako Shadidu Ismail
