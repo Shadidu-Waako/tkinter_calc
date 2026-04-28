@@ -33,6 +33,10 @@ end
 
 ---
 
+# Sequence Diagram
+
+---
+
 # Setup Instructions
 
 ## Run with Docker
