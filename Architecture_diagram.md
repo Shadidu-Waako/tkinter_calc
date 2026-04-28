@@ -104,8 +104,6 @@ sequenceDiagram
     end
     
     S-->>C: (Return Request B) 200 OK
-end
-```
 
 ---
 
