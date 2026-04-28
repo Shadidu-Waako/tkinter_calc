@@ -111,7 +111,9 @@ K -- No --> M
 ## Clone Repository
 
 ```bash
-git clone <your-repo-url>
+git clone (https://github.com/Shadidu-Waako/AmaliTech-DEG-Project-based-challenges)
+cd backend
+cd Idempotency-gateway
 cd idempotency-gateway
 ```
 
